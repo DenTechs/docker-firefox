@@ -3,6 +3,21 @@
 echo "[RTSP] Starting FFmpeg RTSP streaming service..."
 sleep 10
 
+echo "[RTSP] Waiting for MediaMTX server..."
+for i in {1..30}; do
+  if nc -z mediamtx 1935 2>/dev/null; then
+    echo "[RTSP] MediaMTX server is ready!"
+    break
+  fi
+  echo "[RTSP] Attempt $i/30: MediaMTX not ready yet..."
+  sleep 2
+done
+
+if ! nc -z mediamtx 1935 2>/dev/null; then
+  echo "[RTSP] ERROR: Could not connect to MediaMTX after 60 seconds!"
+  exit 1
+fi
+
 # Check if FFMPEG_PIPELINE is set
 if [ -z "$FFMPEG_PIPELINE" ]; then
   echo "[RTSP] ERROR: FFMPEG_PIPELINE environment variable is not set!"

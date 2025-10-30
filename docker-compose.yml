@@ -1,23 +1,47 @@
 ---
 services:
+  mediamtx:
+    image: bluenviron/mediamtx:latest-ffmpeg
+    container_name: mediamtx
+    restart: unless-stopped
+    ports:
+      - "8554:8554" # RTSP
+      - "1935:1935" # RTMP
+      - "8888:8888" # HLS
+    environment:
+      MTX_PROTOCOLS: tcp
+      MTX_HLSALWAYSREMUX: yes
+      MTX_HLSVARIANT: mpegts
+      MTX_HLSSEGMENTCOUNT: 7
+      MTX_HLSSEGMENTDURATION: 1s
+    networks:
+      - firefox-network
+
   firefox:
-    image: dentechs/firefox:latest
+    image: dentechs/firefox:ffmpeg
     container_name: firefox
+    depends_on:
+      - mediamtx
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
+      - SELKIES_IS_MANUAL_RESOLUTION_MODE=True
+      - SELKIES_MANUAL_WIDTH=1920
+      - SELKIES_MANUAL_HEIGHT=1080
+      - SELKIES_FRAMERATE=30
+      - SELKIES_SECOND_SCREEN=False
+      - SELKIES_USE_BROWSER_CURSORS=True
       # - FIREFOX_CLI=https://www.linuxserver.io/ #optional
-      # FFmpeg pipeline for direct RTSP streaming - NVENC hardware acceleration
-      - FFMPEG_PIPELINE=ffmpeg -loglevel info -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v h264_nvenc -preset 3 -rc vbr -cq 23 -b:v 5000k -maxrate 5000k -c:a aac -b:a 320k -f rtsp rtsp://0.0.0.0:8554/stream
-      # CPU fallback pipeline (x264enc) - commented out
-      # - FFMPEG_PIPELINE=ffmpeg -loglevel info -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v libx264 -preset veryfast -tune zerolatency -crf 23 -b:v 5000k -c:a aac -b:a 320k -f rtsp rtsp://0.0.0.0:8554/stream
+      # FFmpeg pipeline for RTMP streaming to MediaMTX - NVENC hardware acceleration
+      - FFMPEG_PIPELINE=ffmpeg -loglevel info -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v h264_nvenc -preset 3 -rc vbr -cq 23 -b:v 5000k -maxrate 5000k -c:a aac -b:a 320k -f flv rtmp://mediamtx:1935/stream
+      # CPU fallback pipeline (x264enc) - commented out  
+      # - FFMPEG_PIPELINE=ffmpeg -loglevel info -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v libx264 -preset veryfast -tune zerolatency -crf 23 -b:v 5000k -c:a aac -b:a 320k -f flv rtmp://mediamtx:1935/stream
     volumes:
       - ./config:/config
     ports:
-      - "3000:3000"
-      - "3001:3001"
-      - "8554:8554"  # RTSP port
+      - "3100:3000"
+      - "3101:3001"
     shm_size: "1gb"
     restart: unless-stopped
     deploy:
@@ -27,3 +51,9 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [compute,video,graphics,utility]
+    networks:
+      - firefox-network
+
+networks:
+  firefox-network:
+    driver: bridge
