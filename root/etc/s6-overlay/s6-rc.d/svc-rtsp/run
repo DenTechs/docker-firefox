@@ -1,0 +1,15 @@
+#!/usr/bin/with-contenv bash
+
+echo "[RTSP] Starting FFmpeg RTSP streaming service..."
+sleep 10
+
+# Check if FFMPEG_PIPELINE is set
+if [ -z "$FFMPEG_PIPELINE" ]; then
+  echo "[RTSP] ERROR: FFMPEG_PIPELINE environment variable is not set!"
+  exit 1
+fi
+
+echo "[RTSP] Starting FFmpeg pipeline..."
+echo "[RTSP] Pipeline: $FFMPEG_PIPELINE"
+
+exec s6-setuidgid abc $FFMPEG_PIPELINE

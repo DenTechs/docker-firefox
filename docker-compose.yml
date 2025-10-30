@@ -1,0 +1,29 @@
+---
+services:
+  firefox:
+    image: dentechs/firefox:latest
+    container_name: firefox
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      # - FIREFOX_CLI=https://www.linuxserver.io/ #optional
+      # FFmpeg pipeline for direct RTSP streaming - NVENC hardware acceleration
+      - FFMPEG_PIPELINE=ffmpeg -loglevel info -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v h264_nvenc -preset 3 -rc vbr -cq 23 -b:v 5000k -maxrate 5000k -c:a aac -b:a 320k -f rtsp rtsp://0.0.0.0:8554/stream
+      # CPU fallback pipeline (x264enc) - commented out
+      # - FFMPEG_PIPELINE=ffmpeg -loglevel info -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v libx264 -preset veryfast -tune zerolatency -crf 23 -b:v 5000k -c:a aac -b:a 320k -f rtsp rtsp://0.0.0.0:8554/stream
+    volumes:
+      - ./config:/config
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "8554:8554"  # RTSP port
+    shm_size: "1gb"
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [compute,video,graphics,utility]
