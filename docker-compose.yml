@@ -6,14 +6,8 @@ services:
     restart: unless-stopped
     ports:
       - "8554:8554" # RTSP
-      - "1935:1935" # RTMP
-      - "8888:8888" # HLS
     environment:
       MTX_PROTOCOLS: tcp
-      MTX_HLSALWAYSREMUX: yes
-      MTX_HLSVARIANT: mpegts
-      MTX_HLSSEGMENTCOUNT: 7
-      MTX_HLSSEGMENTDURATION: 1s
     networks:
       - firefox-network
 
@@ -33,10 +27,10 @@ services:
       - SELKIES_SECOND_SCREEN=False
       - SELKIES_USE_BROWSER_CURSORS=True
       # - FIREFOX_CLI=https://www.linuxserver.io/ #optional
-      # FFmpeg pipeline for RTMP streaming to MediaMTX - NVENC hardware acceleration
-      - FFMPEG_PIPELINE=ffmpeg -loglevel info -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v h264_nvenc -preset 3 -rc vbr -cq 23 -b:v 5000k -maxrate 5000k -c:a aac -b:a 320k -f flv rtmp://mediamtx:1935/stream
-      # CPU fallback pipeline (x264enc) - commented out  
-      # - FFMPEG_PIPELINE=ffmpeg -loglevel info -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v libx264 -preset veryfast -tune zerolatency -crf 23 -b:v 5000k -c:a aac -b:a 320k -f flv rtmp://mediamtx:1935/stream
+      # FFmpeg pipeline for RTSP streaming to MediaMTX - NVENC hardware acceleration with zero latency
+      - FFMPEG_PIPELINE=ffmpeg -loglevel error -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v h264_nvenc -preset 3 -zerolatency 1 -rc cbr -b:v 5000k -bufsize 5000k -slices 1 -spatial-aq 1 -temporal-aq 1 -g 30 -c:a aac -b:a 320k -f rtsp rtsp://mediamtx:8554/stream
+      # CPU fallback pipeline (x264) with zero latency - commented out  
+      # - FFMPEG_PIPELINE=ffmpeg -loglevel error -f x11grab -video_size 1920x1080 -framerate 30 -i :1.0 -f pulse -i default -c:v libx264 -preset veryfast -tune zerolatency -b:v 5000k -slices 1 -aq-mode 2 -c:a aac -b:a 320k -f rtsp rtsp://mediamtx:8554/stream
     volumes:
       - ./config:/config
     ports:
