@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM dentechs/docker-baseimage-selkies:ubuntunoble
+FROM ghcr.io/linuxserver/baseimage-selkies:ubuntunoble
 
 # set version label
 ARG BUILD_DATE
